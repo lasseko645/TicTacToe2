@@ -29,30 +29,34 @@ public class TicTacToeClient extends Application
   // Create and initialize cells
   private Cell[][] cell =  new Cell[3][3];
 
-  // Create and initialize a title label
+  // Create and initialize a title label (brugt i start metoden til UI)
   private Label lblTitle = new Label();
 
-  // Create and initialize a status label
+  // Create and initialize a status label (brugt i start metoden til UI)
   private Label lblStatus = new Label();
 
-  // Indicate selected row and column by the current move
+  // Indicate selected row and column by the current move(brugt i metoder til at holde styr på onclick events)
   private int rowSelected;
   private int columnSelected;
 
-  // Input and output streams from/to server
+  // Input and output streams from/to server (bare input og output streams)
   private DataInputStream fromServer;
   private DataOutputStream toServer;
 
-  // Continue to play?
+  // Continue to play (for kontrol af om spillet slutter, dette bliver checket efter vært tref af en individuel client)
   private boolean continueToPlay = true;
 
-  // Wait for the player to mark a cell
+  // Wait for the player to mark a cell (default er at du venter intil der bliver givet besked fra serveren at du ikke skal vente længere, dette sker første gang når en anden spiller opretter forbindelse efter dig)
   private boolean waiting = true;
 
-  // Host name or ip
+  // Host name or ip (skal ændres manuelt)
   private String host = "localhost";
 
-  @Override // Override the start method in the Application class
+
+  //  lasse  \\
+  //vis sætter lidt extra til start metoden for vores clienter
+  //hovedsagligt gør vi bare at når appen starter åbner der et vindue
+  @Override
   public void start(Stage primaryStage) {
     // Pane to hold cell
     GridPane pane = new GridPane(); 
@@ -64,17 +68,21 @@ public class TicTacToeClient extends Application
     borderPane.setTop(lblTitle);
     borderPane.setCenter(pane);
     borderPane.setBottom(lblStatus);
+
     
     // Create a scene and place it in the stage
     Scene scene = new Scene(borderPane, 320, 350);
     primaryStage.setTitle("TicTacToeClient"); // Set the stage title
     primaryStage.setScene(scene); // Place the scene in the stage
-    primaryStage.show(); // Display the stage   
+    primaryStage.show(); // Display the stage
 
     // Connect to the server
     connectToServer();
   }
 
+  //  lasse  \\
+  //en client opretter forbindelse til serveren (eller prøver)
+  //efter det er sket sucessfyldt bliver clienten gjordt klar til at man kan spille spillet
   private void connectToServer() {
     try {
       // Create a socket to connect to the server
@@ -90,7 +98,9 @@ public class TicTacToeClient extends Application
       ex.printStackTrace();
     }
 
-    // Control the game on a separate thread
+    //  lasse  \\
+    //det meste af hovet logikken bliver brugt her når two spillere skal spille sammen
+    // det er også her at en client bliver sat til endten at være player et eller player to
     new Thread(() -> {
       try {
         // Get notification from the server
@@ -144,7 +154,8 @@ public class TicTacToeClient extends Application
     }).start();
   }
 
-  /** Wait for the player to mark a cell */
+  //  lasse  \\
+  //this makes sure your app is sleeping while its not your turn
   private void waitForPlayerAction() throws InterruptedException {
     while (waiting) {
       Thread.sleep(100);
@@ -153,19 +164,25 @@ public class TicTacToeClient extends Application
     waiting = true;
   }
 
-  /** Send this player's move to the server */
+  //  lasse  \\
+  //denne metode sender de indikeret valgte rekker og colonner
   private void sendMove() throws IOException {
-    toServer.writeInt(rowSelected); // Send the selected row
-    toServer.writeInt(columnSelected); // Send the selected column
+    toServer.writeInt(rowSelected);
+    toServer.writeInt(columnSelected);
   }
 
-  /** Receive info from the server */
+  //  lasse  \\
+  // her finder programmet ud af om spillet slutter når der bliver taget et træk af en spiller
   private void receiveInfoFromServer() throws IOException {
-    // Receive game status
+
+    //  lasse  \\
+    //den henter status fra server for at kunne se om spillet er slut
     int status = fromServer.readInt();
 
+
+    //  lasse  \\
+    //vis spiller et har vundet så slutter spillet
     if (status == PLAYER1_WON) {
-      // Player 1 won, stop playing
       continueToPlay = false;
       if (myToken == 'X') {
         Platform.runLater(() -> lblStatus.setText("I won! (X)"));
@@ -176,8 +193,11 @@ public class TicTacToeClient extends Application
         receiveMove();
       }
     }
+
+
+    //  lasse  \\
+    //vis player to har vundet så slutter spillet
     else if (status == PLAYER2_WON) {
-      // Player 2 won, stop playing
       continueToPlay = false;
       if (myToken == 'O') {
         Platform.runLater(() -> lblStatus.setText("I won! (O)"));
@@ -188,16 +208,20 @@ public class TicTacToeClient extends Application
         receiveMove();
       }
     }
+
+    //  lasse  \\
+    //vis brættet er fuldt og der ikke er nogen der har vundet så slutter spillet
     else if (status == DRAW) {
-      // No winner, game is over
       continueToPlay = false;
       Platform.runLater(() -> 
         lblStatus.setText("Game is over, no winner!"));
-
       if (myToken == 'O') {
         receiveMove();
       }
     }
+
+    //  lasse  \\
+    //vis spillet ikke er slut så får jeg turen
     else {
       receiveMove();
       Platform.runLater(() -> lblStatus.setText("My turn"));
@@ -205,44 +229,59 @@ public class TicTacToeClient extends Application
     }
   }
 
+
+  //  lasse  \\
+  //når din modstander har lavet et træk så bliver dit bræt ændret samtidig
   private void receiveMove() throws IOException {
-    // Get the other player's move
     int row = fromServer.readInt();
     int column = fromServer.readInt();
     Platform.runLater(() -> cell[row][column].setToken(otherToken));
   }
 
-  // An inner class for a cell
+  //  lasse  \\
+  //single responsability princippet siger at da det kun er vores clint server som skal bruge den her klasse så skal vi sikre at det kun er denne klasse som kender til
   public class Cell extends Pane {
-    // Indicate the row and column of this cell in the board
+
+    //  lasse  \\
+    //vores celler skal have rækker og colloner
     private int row;
     private int column;
 
-    // Token used for this cell
+    //  lasse  \\
+    //placeholder værdi
     private char token = ' ';
 
+    //  lasse  \\
+    //her definere vi at en celle skal bestå af en sort border en "størelse".
+    //og til sidst sikre vi os at vis der bliver trykket på en celle så køre den metode som hedder handleMouseClick (det er defineret i handleMouseClick metoden at der kune sker noget vis det er din tur)
     public Cell(int row, int column) {
       this.row = row;
       this.column = column;
-      this.setPrefSize(2000, 2000); // What happens without this?
-      setStyle("-fx-border-color: black"); // Set cell's border
+      this.setPrefSize(800, 800); //Lasse: jeg ved ikke helt hvordan den her linie virker men internettet sadge at det er nødvendigt for at kunne sikre sig at kunne sikre sig størelse unden brug a billeder
+      setStyle("-fx-border-color: black");
       this.setOnMouseClicked(e -> handleMouseClick());  
     }
 
-    /** Return token */
+    //  lasse \\
+    //en getter for the sake of having it jeg tror aldrig den bliver brugt
     public char getToken() {
       return token;
     }
 
-    /** Set a new token */
+    //  lasse  \\
+    //denne setter er lavet om til at bruge vores repaint metode til at sette vores token
     public void setToken(char c) {
       token = c;
       repaint();
     }
 
+
+        //  lasse  \\
+    //denne metode bliver kaldt når en pane i vores board bliver trykket på men kun vis det er din tur\\
+    //den tager udgangspunkt i hvad for et tegn du har fået givet til dig af server og gør sådan at du sætte et X ind vis du er player X eller omvendt vis du er player O\\
     protected void repaint() {
       if (token == 'X') {
-        Line line1 = new Line(10, 10, 
+        Line line1 = new Line(10, 10,
           this.getWidth() - 10, this.getHeight() - 10);
         line1.endXProperty().bind(this.widthProperty().subtract(10));
         line1.endYProperty().bind(this.heightProperty().subtract(10));
@@ -251,8 +290,7 @@ public class TicTacToeClient extends Application
         line2.startYProperty().bind(
           this.heightProperty().subtract(10));
         line2.endXProperty().bind(this.widthProperty().subtract(10));
-        
-        // Add the lines to the pane
+
         this.getChildren().addAll(line1, line2); 
       }
       else if (token == 'O') {
@@ -270,29 +308,24 @@ public class TicTacToeClient extends Application
         ellipse.setStroke(Color.BLACK);
         ellipse.setFill(Color.WHITE);
         
-        getChildren().add(ellipse); // Add the ellipse to the pane
+        getChildren().add(ellipse);
       }
     }
 
-    /* Handle a mouse click event */
+
+    //  lasse  \\
+    //her handler vi vores mouse event, når vi clicker på en pane
+    //og det virker kun vis det er din tur
     private void handleMouseClick() {
-      // If cell is not occupied and the player has the turn
       if (token == ' ' && myTurn) {
-        setToken(myToken);  // Set the player's token in the cell
+        setToken(myToken);
         myTurn = false;
         rowSelected = row;
         columnSelected = column;
         lblStatus.setText("Waiting for the other player to move");
-        waiting = false; // Just completed a successful move
+        waiting = false;
       }
     }
   }
 
-  /**
-   * The main method is only needed for the IDE with limited
-   * JavaFX support. Not needed for running from the command line.
-   */
-  public static void main(String[] args) {
-    launch(args);
-  }
 }
